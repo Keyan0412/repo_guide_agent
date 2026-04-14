@@ -1,0 +1,23 @@
+# Local environment
+.env
+.venv/
+venv/
+
+# Python cache / test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Project runtime outputs
+outputs/
+
+# IDE / OS noise
+.DS_Store
+.idea/
+.vscode/

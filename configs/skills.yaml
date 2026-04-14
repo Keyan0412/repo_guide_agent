@@ -1,0 +1,11 @@
+skills:
+  summarize_repo:
+    enabled: true
+  find_entrypoints:
+    enabled: true
+  explain_module:
+    enabled: true
+  trace_symbol:
+    enabled: true
+  generate_reading_plan:
+    enabled: true
