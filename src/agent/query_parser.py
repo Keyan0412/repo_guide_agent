@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Callable
 
 from src.errors import AgentError
@@ -29,7 +28,10 @@ class QueryParser:
         if parsed is None:
             raise AgentError("query_parser", "LLM semantic parser failed to return valid ParsedQuery JSON.")
         parsed = parsed.model_copy(update={"repo_path": user_input.repo_path, "question": user_input.question})
-        self._emit(f"[query_parser:done] llm intent={parsed.intent} symbol={parsed.symbol_name} module={parsed.module_path}")
+        self._emit(
+            f"[query_parser:done] objective={parsed.objective} answer_mode={parsed.answer_mode} "
+            f"symbol={parsed.symbol_name} module={parsed.module_path}"
+        )
         return parsed
 
     def _parse_with_llm(self, user_input: UserQueryInput) -> ParsedQuery | None:

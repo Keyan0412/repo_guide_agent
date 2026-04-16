@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import json
 
 from src.agent.context import AgentContext
 from src.errors import AgentError
@@ -38,6 +39,9 @@ def test_response_formatter_saves_json_output(tmp_path: Path):
     assert "结构化结果已保存到" in rendered
     saved = list(tmp_path.glob("run_*.json"))
     assert len(saved) == 1
+    payload = json.loads(saved[0].read_text(encoding="utf-8"))
+    assert "workflow_state" in payload
+    assert "workflow_history" in payload
 
 
 def test_response_formatter_errors_without_llm(tmp_path: Path):

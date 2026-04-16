@@ -39,12 +39,20 @@ class BaseSkill(ABC):
             tools=build_tool_schemas(),
             tool_executor=toolkit.execute,
             progress_callback=context.emit,
+            fallback_builder=lambda messages: self.build_fallback_result(skill_input, context, messages),
         )
         if result is None:
             return None
         evidence = _collect_evidence(result)
         uncertainties = result.get("uncertainties", []) if isinstance(result.get("uncertainties"), list) else []
-        return SkillOutput(skill_name=self.name, data=result, evidence=evidence, uncertainties=uncertainties)
+        return SkillOutput(
+            skill_name=self.name,
+            data=result,
+            evidence=evidence,
+            uncertainties=uncertainties,
+            state_updates=self.build_state_updates(result, skill_input, context),
+            next_actions=self.build_next_actions(result, skill_input, context),
+        )
 
     def build_system_prompt(self) -> str:
         prompt_path = Path("prompts/skills") / f"{self.name}.md"
@@ -72,15 +80,31 @@ class BaseSkill(ABC):
             {
                 "repo_path": skill_input.repo_path,
                 "question": skill_input.question,
+                "objective": skill_input.objective,
+                "answer_mode": skill_input.answer_mode,
                 "user_goal": skill_input.user_goal,
                 "module_path": skill_input.module_path,
                 "symbol_name": skill_input.symbol_name,
                 "entry_type": skill_input.entry_type,
+                "key_entities": skill_input.key_entities,
+                "required_evidence": skill_input.required_evidence,
+                "investigation_focus": skill_input.investigation_focus,
+                "expected_sections": skill_input.expected_sections,
+                "workflow_state": skill_input.workflow_state,
                 "previous_results": previous,
             },
             ensure_ascii=False,
             indent=2,
         )
+
+    def build_state_updates(self, result: dict[str, Any], skill_input: SkillInput, context: AgentContext) -> dict[str, Any]:
+        return {}
+
+    def build_next_actions(self, result: dict[str, Any], skill_input: SkillInput, context: AgentContext) -> list[str]:
+        return []
+
+    def build_fallback_result(self, skill_input: SkillInput, context: AgentContext, messages: list[dict[str, Any]]) -> dict[str, Any] | None:
+        return None
 
     @abstractmethod
     def output_schema_text(self) -> str:
@@ -98,4 +122,15 @@ def _collect_evidence(result: dict[str, Any]) -> list[str]:
             for value in item.get("supporting_evidence", [])[:2]:
                 evidence.append(str(value))
         return evidence
+    if isinstance(result.get("findings"), list):
+        evidence = []
+        for item in result["findings"][:6]:
+            claim = item.get("claim")
+            if claim:
+                evidence.append(str(claim))
+            for value in item.get("evidence", [])[:2]:
+                evidence.append(str(value))
+        return evidence
+    if isinstance(result.get("evidence_snippets"), list):
+        return [str(item) for item in result["evidence_snippets"][:8]]
     return []

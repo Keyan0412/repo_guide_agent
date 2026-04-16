@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from src.agent.executor import Executor
 from src.agent.response_formatter import ResponseFormatter
 from src.agent.router import Router
@@ -11,22 +9,48 @@ from src.schemas.user_io import UserQueryInput
 class DummyLLMClient:
     enabled = True
 
+    def __init__(self):
+        self.json_payloads = [
+            {
+                "intent": "answer_repo_question",
+                "objective": "execution_flow_explanation",
+                "answer_mode": "ordered_steps",
+                "module_path": None,
+                "symbol_name": None,
+                "user_goal": "解释从用户问题到最终回答的处理流程",
+                "entry_type": "cli",
+                "key_entities": ["用户问题", "最终回答"],
+                "required_evidence": ["entrypoint", "planning", "execution", "output_rendering"],
+                "investigation_focus": ["CLI 入口", "问题解析", "执行链路"],
+                "expected_sections": ["整体结论", "步骤"],
+                "confidence": 0.9,
+                "notes": [],
+            },
+            {
+                "answer_title": "任务流",
+                "answer_markdown": "1. 解析命令行参数。\n2. 建模问题并调查仓库。\n3. 合成并校验答案。",
+                "coverage_points": ["说明了从输入到输出的步骤"],
+                "remaining_gaps": [],
+                "uncertainties": [],
+            },
+            {
+                "verdict": "ready",
+                "coverage_ok": True,
+                "missing_points": [],
+                "unsupported_claims": [],
+                "recommended_focus": [],
+                "uncertainties": [],
+            },
+        ]
+
     def generate_json(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 1200):
-        return {
-            "intent": "generate_reading_plan",
-            "module_path": None,
-            "symbol_name": None,
-            "user_goal": "理解启动链路",
-            "entry_type": None,
-            "confidence": 0.9,
-            "notes": [],
-        }
+        return self.json_payloads.pop(0)
 
     def run_tool_agent(self, **kwargs):
         return {
-            "user_goal": "理解启动链路",
-            "reading_steps": [{"order": 1, "path": "src/main.py", "why_read": "入口", "focus_points": ["main"]}],
-            "suggested_stop_condition": "stop",
+            "investigation_summary": "找到入口、调查和输出链路。",
+            "findings": [{"claim": "主链路由 main、router、executor 和 formatter 组成。", "importance": "high", "evidence": ["src/main.py"], "related_files": ["src/main.py"]}],
+            "evidence_gaps": [],
             "uncertainties": [],
         }
 
@@ -35,7 +59,7 @@ class DummyLLMClient:
 
 
 def test_ask_flow_has_bound_question(tmp_path):
-    question = "如果我只想理解启动链路，应该按什么顺序读？"
+    question = "该项目在获得用户的问题后会经历怎样的过程来最终回答用户的问题？"
     dummy = DummyLLMClient()
     user_input = UserQueryInput(repo_path=".", question=question)
     parsed_query, plan = Router(llm_client=dummy).route_user_input(user_input)
@@ -46,3 +70,10 @@ def test_ask_flow_has_bound_question(tmp_path):
         question=question,
     )
     assert "结构化结果已保存到" in rendered
+    assert context.workflow_state["completed_skills"] == [
+        "investigate_question",
+        "synthesize_answer",
+        "verify_answer",
+    ]
+    assert context.workflow_state["answer_ready"] is True
+    assert len(context.workflow_history) == 6

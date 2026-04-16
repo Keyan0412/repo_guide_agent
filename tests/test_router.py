@@ -14,47 +14,60 @@ class DummyLLMClient:
         return self.payload
 
 
-def test_route_summary():
+def test_route_builds_question_driven_workflow():
     parsed_query, plan = Router(
         llm_client=DummyLLMClient(
-            {"intent": "summarize_repo", "module_path": None, "symbol_name": None, "user_goal": None, "entry_type": None, "confidence": 0.9, "notes": []}
+            {
+                "intent": "answer_repo_question",
+                "objective": "execution_flow_explanation",
+                "answer_mode": "ordered_steps",
+                "module_path": None,
+                "symbol_name": None,
+                "user_goal": "解释处理流程",
+                "entry_type": "cli",
+                "key_entities": ["用户问题"],
+                "required_evidence": ["entrypoint", "planning", "execution"],
+                "investigation_focus": ["CLI 入口", "执行链路"],
+                "expected_sections": ["整体结论", "步骤"],
+                "confidence": 0.9,
+                "notes": [],
+            }
         ),
-    ).route_user_input(UserQueryInput(repo_path=".", question="这个仓库是干什么的？"))
-    assert parsed_query.intent == "summarize_repo"
-    assert plan.selected_skills[0].name == "summarize_repo"
+    ).route_user_input(UserQueryInput(repo_path=".", question="系统如何处理用户问题？"))
+    assert parsed_query.objective == "execution_flow_explanation"
+    assert plan.intent == "execution_flow_explanation"
+    assert plan.entry_node_id == "investigate_pass_1"
+    assert [item.name for item in plan.selected_skills] == [
+        "investigate_question",
+        "synthesize_answer",
+        "verify_answer",
+        "investigate_question",
+        "synthesize_answer",
+        "verify_answer",
+    ]
+    assert any(edge.condition == "needs_followup" for edge in plan.edges)
 
 
-def test_route_trace():
+def test_route_keeps_module_and_symbol_hints():
     parsed_query, plan = Router(
         llm_client=DummyLLMClient(
-            {"intent": "trace_symbol", "module_path": None, "symbol_name": "train", "user_goal": None, "entry_type": None, "confidence": 0.9, "notes": []}
+            {
+                "intent": "trace_symbol",
+                "objective": "symbol_trace",
+                "answer_mode": "call_chain",
+                "module_path": None,
+                "symbol_name": "train",
+                "user_goal": None,
+                "entry_type": None,
+                "key_entities": ["train"],
+                "required_evidence": ["symbol_definition", "symbol_references"],
+                "investigation_focus": ["定义位置", "调用位置"],
+                "expected_sections": ["结论", "调用链"],
+                "confidence": 0.9,
+                "notes": [],
+            }
         ),
     ).route_user_input(UserQueryInput(repo_path=".", question="train() 最终是从哪里被调用起来的？"))
-    assert parsed_query.intent == "trace_symbol"
-    assert plan.selected_skills[0].name == "trace_symbol"
-
-
-def test_route_reading_plan_priority():
-    parsed_query, plan = Router(
-        llm_client=DummyLLMClient(
-            {"intent": "generate_reading_plan", "module_path": None, "symbol_name": None, "user_goal": "帮我理解这个仓库的训练流程，从入口开始说明。", "entry_type": "training", "confidence": 0.9, "notes": []}
-        ),
-    ).route_user_input(UserQueryInput(repo_path=".", question="帮我理解这个仓库的训练流程，从入口开始说明。"))
-    assert parsed_query.intent == "generate_reading_plan"
-    assert [item.name for item in plan.selected_skills] == [
-        "summarize_repo",
-        "find_entrypoints",
-        "generate_reading_plan",
-    ]
-
-
-def test_route_module_explanation_uses_semantic_slots():
-    parsed_query, plan = Router(
-        llm_client=DummyLLMClient(
-            {"intent": "explain_module", "module_path": "src/retriever", "symbol_name": None, "user_goal": None, "entry_type": None, "confidence": 0.9, "notes": []}
-        ),
-    ).route_user_input(
-        UserQueryInput(repo_path=".", question="解释一下 src/retriever 目录是做什么的。")
-    )
-    assert parsed_query.module_path == "src/retriever"
-    assert plan.selected_skills[0].args["module_path"] == "src/retriever"
+    assert parsed_query.symbol_name == "train"
+    assert parsed_query.answer_mode == "call_chain"
+    assert plan.selected_skills[0].name == "investigate_question"

@@ -53,6 +53,7 @@ class LLMClient:
         progress_callback=None,
         max_iterations: int = 15,
         max_output_tokens: int = 1400,
+        fallback_builder=None,
     ) -> dict[str, Any] | None:
         if not self._client:
             return None
@@ -130,8 +131,13 @@ class LLMClient:
             extra_body={"enable_thinking": self.enable_thinking},
         )
         if not response.choices:
-            return None
-        parsed = _extract_json_object(response.choices[0].message.content or "")
+            return fallback_builder(messages) if fallback_builder else None
+        final_content = response.choices[0].message.content or ""
+        parsed = _extract_json_object(final_content)
+        if parsed is None:
+            parsed = _extract_json_object(_salvage_json_like_text(final_content))
+        if parsed is None and fallback_builder:
+            parsed = fallback_builder(messages + [{"role": "assistant", "content": final_content}])
         if progress_callback:
             progress_callback("[llm] final JSON response received" if parsed is not None else "[llm] failed to return valid JSON")
         return parsed
@@ -156,6 +162,18 @@ def _extract_json_object(content: str) -> dict[str, Any] | None:
             except json.JSONDecodeError:
                 return None
     return None
+
+
+def _salvage_json_like_text(content: str) -> str:
+    content = content.strip()
+    if not content:
+        return content
+    content = content.replace("```json", "```").replace("```JSON", "```")
+    start = content.find("{")
+    end = content.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return content[start : end + 1]
+    return content
 
 
 def _parse_bool(value: str | None, default: bool) -> bool:

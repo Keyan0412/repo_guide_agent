@@ -20,7 +20,7 @@ class ResponseFormatter:
         if not outputs:
             return "No skill output."
         output_path = self.save_raw_outputs(outputs, context, question=question)
-        rendered = self._format_with_llm(outputs, context, question=question)
+        rendered = self._select_rendered_answer(outputs, context, question=question)
         if rendered is None:
             raise AgentError("response_formatter", f"LLM failed to render natural-language output. Raw JSON was saved to {output_path}.")
         return f"{rendered}\n\n结构化结果已保存到 `{output_path}`。"
@@ -35,10 +35,23 @@ class ResponseFormatter:
             "tool_logs": [tool_log.model_dump() for tool_log in context.tool_logs],
             "uncertainties": context.uncertainties,
             "read_files": sorted(context.read_files),
+            "workflow_state": context.workflow_state,
+            "workflow_history": context.workflow_history,
         }
         file_path = self.output_dir / f"run_{timestamp}.json"
         file_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return str(file_path)
+
+    def _select_rendered_answer(self, outputs: list[SkillOutput], context: AgentContext, question: str | None = None) -> str | None:
+        synthesized = None
+        for output in reversed(outputs):
+            answer = output.data.get("answer_markdown")
+            if output.skill_name == "synthesize_answer" and isinstance(answer, str) and answer.strip():
+                synthesized = answer.strip()
+                break
+        if synthesized and context.workflow_state.get("answer_ready"):
+            return synthesized
+        return self._format_with_llm(outputs, context, question=question)
 
     def _format_with_llm(self, outputs: list[SkillOutput], context: AgentContext, question: str | None = None) -> str | None:
         if not self.llm_client.enabled:
@@ -51,6 +64,8 @@ class ResponseFormatter:
                 "skill_outputs": [output.model_dump() for output in outputs],
                 "tool_log_count": len(context.tool_logs),
                 "uncertainties": context.uncertainties,
+                "workflow_state": context.workflow_state,
+                "workflow_history": context.workflow_history,
             },
             ensure_ascii=False,
             indent=2,

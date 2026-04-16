@@ -8,14 +8,14 @@ from src.tools.symbol_search import search_symbol
 
 def test_file_tree_smoke():
     result = get_file_tree(".", max_depth=2)
-    assert "repo_guide_agent_project_spec.md" in result.tree_text
+    assert "README.md" in result.tree_text
     assert result.file_count >= 1
 
 
 def test_keyword_search_smoke():
-    hits = search_keyword(".", "项目说明书", top_k=5)
+    hits = search_keyword(".", "Repo Guide Agent", top_k=5)
     assert hits
-    assert hits[0].path.endswith("repo_guide_agent_project_spec.md")
+    assert any(hit.path.endswith("README.md") for hit in hits)
 
 
 def test_symbol_search_smoke():
