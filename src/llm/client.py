@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolParam, ChatCompletionMessageToolCallParam
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolParam, ChatCompletionMessageToolCallParam, ChatCompletionMessageFunctionToolCall
 from dotenv import load_dotenv
 
 
@@ -85,7 +85,7 @@ class LLMClient:
                             "arguments": tool_call.function.arguments,
                         },
                     }
-                    for tool_call in tool_calls
+                    for tool_call in tool_calls if isinstance(tool_call, ChatCompletionMessageFunctionToolCall)
                 ]
                 assistant_message: ChatCompletionAssistantMessageParam = {
                     "role": "assistant",
@@ -94,6 +94,8 @@ class LLMClient:
                 }
                 messages.append(assistant_message)
                 for tool_call in tool_calls:
+                    if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
+                        continue
                     try:
                         arguments = json.loads(tool_call.function.arguments or "{}")
                     except json.JSONDecodeError:
