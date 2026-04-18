@@ -5,7 +5,16 @@ import os
 from typing import Any
 
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolParam, ChatCompletionMessageToolCallParam, ChatCompletionMessageFunctionToolCall
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionToolParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionMessageToolCallParam,
+    ChatCompletionMessageFunctionToolCall,
+    ChatCompletionUserMessageParam,
+    ChatCompletionSystemMessageParam,
+)
 from dotenv import load_dotenv
 
 
@@ -25,17 +34,25 @@ class LLMClient:
     def complete(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 800) -> str | None:
         if not self._client:
             return None
+
+        system_message: ChatCompletionSystemMessageParam = {
+            "role": "system",
+            "content": system_prompt,
+        }
+        user_message: ChatCompletionUserMessageParam = {
+            "role": "user",
+            "content": user_prompt,
+        }
+        messages: list[ChatCompletionMessageParam] = [system_message, user_message]
+
         response = self._client.chat.completions.create(
             model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=messages,
             max_tokens=max_output_tokens,
             temperature=0.2,
             extra_body={"enable_thinking": self.enable_thinking},
         )
-        return response.choices[0].message.content if response.choices else None
+        return response.choices[0].message.content
 
     def generate_json(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 1200) -> dict[str, Any] | None:
         content = self.complete(system_prompt=system_prompt, user_prompt=user_prompt, max_output_tokens=max_output_tokens)
@@ -57,10 +74,16 @@ class LLMClient:
     ) -> dict[str, Any] | None:
         if not self._client:
             return None
-        messages: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
+        system_message: ChatCompletionSystemMessageParam = {
+            "role": "system",
+            "content": system_prompt,
+        }
+        user_message: ChatCompletionUserMessageParam = {
+            "role": "user",
+            "content": user_prompt,
+        }
+        messages: list[ChatCompletionMessageParam] = [system_message, user_message]
+
         for _ in range(max_iterations):
             response = self._client.chat.completions.create(
                 model=self.model,
@@ -101,13 +124,12 @@ class LLMClient:
                     except json.JSONDecodeError:
                         arguments = {}
                     tool_result = tool_executor(tool_call.function.name, arguments)
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": json.dumps(tool_result, ensure_ascii=False),
-                        }
-                    )
+                    tool_message: ChatCompletionToolMessageParam = {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps(tool_result, ensure_ascii=False),
+                    }
+                    messages.append(tool_message)
                 continue
             content = message.content or ""
             parsed = _extract_json_object(content)
@@ -115,16 +137,16 @@ class LLMClient:
                 if progress_callback:
                     progress_callback("[llm] produced final JSON directly")
                 return parsed
-            messages.append({"role": "assistant", "content": content})
+            assistant_message: ChatCompletionAssistantMessageParam = {"role": "assistant", "content": content}
+            messages.append(assistant_message)
             break
         if progress_callback:
             progress_callback("[llm] forcing final JSON-only response")
-        messages.append(
-            {
-                "role": "user",
-                "content": "Return only the final JSON object now. No markdown, no explanation, no code fences.",
-            }
-        )
+        user_message: ChatCompletionUserMessageParam = {
+            "role": "user",
+            "content": "Return only the final JSON object now. No markdown, no explanation, no code fences.",
+        }
+        messages.append(user_message)
         response = self._client.chat.completions.create(
             model=self.model,
             messages=messages,
