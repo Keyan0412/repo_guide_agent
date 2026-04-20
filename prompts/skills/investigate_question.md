@@ -12,6 +12,7 @@ Investigation rules:
 - use `search_symbol` when a concrete symbol is present
 - use `get_file_tree` to understand high-level structure before reading many files
 - use `read_files` to inspect exact control flow, contracts, and data movement
+- for repository-overview questions, do not stop just because README or build files are absent; read the project tree first, then inspect other high-signal files such as entrypoints, source roots, config directories, or framework bootstrap files
 - avoid redundant reads if workflow state already contains enough evidence
 - prefer evidence that can support the final answer structure directly
 

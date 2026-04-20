@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from src.agent.executor import Executor
+from src.agent.context import AgentContext
 from src.agent.router import Router
 from src.schemas.user_io import UserQueryInput
+from src.schemas.skill_io import SkillInput
+from src.skills.investigate_question import InvestigateQuestionSkill
 
 
 class DummyLLMClient:
@@ -74,3 +77,43 @@ def test_verbose_execution_emits_progress():
     ]
     assert context.workflow_state["answer_ready"] is True
     assert context.workflow_state["draft_answer"] == "这是一个测试仓库回答。"
+
+
+class DummyInvestigateLLMClient:
+    enabled = True
+
+    def run_tool_agent(self, **kwargs):
+        return {
+            "investigation_summary": "收集了仓库线索。",
+            "findings": [
+                {
+                    "claim": "调查阶段已经读取了项目树和代码文件。",
+                    "importance": "high",
+                    "evidence": ["bootstrap"],
+                    "related_files": ["bootstrap"],
+                }
+            ],
+            "evidence_gaps": [],
+            "uncertainties": [],
+        }
+
+
+def test_investigate_bootstraps_tree_and_fallback_files_without_readme(tmp_path):
+    repo = tmp_path / "repo"
+    src_dir = repo / "src"
+    src_dir.mkdir(parents=True)
+    (src_dir / "main.py").write_text("def main():\n    return 'ok'\n", encoding="utf-8")
+    (src_dir / "service.py").write_text("SERVICE_NAME = 'mentor-finder'\n", encoding="utf-8")
+    (repo / "docs").mkdir()
+
+    context = AgentContext(repo_path=str(repo), verbose=False)
+    skill = InvestigateQuestionSkill(llm_client=DummyInvestigateLLMClient())
+    output = skill.run(
+        SkillInput(repo_path=str(repo), question="这个仓库是干什么的？", objective="repo_overview"),
+        context,
+    )
+
+    assert output.skill_name == "investigate_question"
+    assert any(log.tool_name == "get_file_tree" for log in context.tool_logs)
+    assert any(log.tool_name == "read_files" for log in context.tool_logs)
+    assert str((repo / "src" / "main.py").resolve()) in context.read_files
