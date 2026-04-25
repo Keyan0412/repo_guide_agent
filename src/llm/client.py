@@ -7,13 +7,13 @@ from typing import Any
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
     ChatCompletionToolParam,
     ChatCompletionToolMessageParam,
     ChatCompletionMessageToolCallParam,
     ChatCompletionMessageFunctionToolCall,
-    ChatCompletionUserMessageParam,
-    ChatCompletionSystemMessageParam,
 )
 from dotenv import load_dotenv
 
@@ -24,7 +24,10 @@ class LLMClient:
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.base_url = os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
         self.model = os.getenv("OPENAI_MODEL", "qwen-plus")
-        self.enable_thinking = _parse_bool(os.getenv("ENABLE_THINKING"), default=False)
+        raw_enable_thinking = os.getenv("ENABLE_THINKING", "false").strip().lower()
+        if raw_enable_thinking not in {"true", "false"}:
+            raise ValueError("ENABLE_THINKING must be set to 'true' or 'false'.")
+        self.enable_thinking = raw_enable_thinking == "true"
         self._client = OpenAI(api_key=self.api_key, base_url=self.base_url) if self.api_key else None
 
     @property
@@ -32,6 +35,7 @@ class LLMClient:
         return self._client is not None
 
     def complete(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 800) -> str | None:
+        """Return raw assistant text for a single system+user prompt pair."""
         if not self._client:
             return None
 
@@ -55,6 +59,7 @@ class LLMClient:
         return response.choices[0].message.content
 
     def generate_json(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 1200) -> dict[str, Any] | None:
+        """Return the first JSON object parsed from a single completion response."""
         content = self.complete(system_prompt=system_prompt, user_prompt=user_prompt, max_output_tokens=max_output_tokens)
         if not content:
             return None
@@ -72,6 +77,7 @@ class LLMClient:
         max_output_tokens: int = 1400,
         fallback_builder=None,
     ) -> dict[str, Any] | None:
+        """Run a tool-calling loop and return the final parsed JSON object."""
         if not self._client:
             return None
         system_message: ChatCompletionSystemMessageParam = {
@@ -85,6 +91,8 @@ class LLMClient:
         messages: list[ChatCompletionMessageParam] = [system_message, user_message]
 
         for _ in range(max_iterations):
+
+            # get model message
             response = self._client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -95,10 +103,13 @@ class LLMClient:
                 extra_body={"enable_thinking": self.enable_thinking},
             )
             if not response.choices:
-                return None
+                raise RuntimeError("LLM tool-agent response contained no choices.")
             message = response.choices[0].message
+
             tool_calls = message.tool_calls or []
             if tool_calls:
+
+                # add tool call information to messages
                 tool_call_params: list[ChatCompletionMessageToolCallParam] = [
                     {
                         "id": tool_call.id,
@@ -116,6 +127,8 @@ class LLMClient:
                     "tool_calls": tool_call_params,
                 }
                 messages.append(assistant_message)
+
+                # execute tool calls and record
                 for tool_call in tool_calls:
                     if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
                         continue
@@ -131,15 +144,20 @@ class LLMClient:
                     }
                     messages.append(tool_message)
                 continue
+
+            # whether model returns final result
             content = message.content or ""
             parsed = _extract_json_object(content)
             if parsed is not None:
                 if progress_callback:
                     progress_callback("[llm] produced final JSON directly")
                 return parsed
+
             assistant_message: ChatCompletionAssistantMessageParam = {"role": "assistant", "content": content}
             messages.append(assistant_message)
             break
+
+        # force final response
         if progress_callback:
             progress_callback("[llm] forcing final JSON-only response")
         user_message: ChatCompletionUserMessageParam = {
@@ -155,11 +173,13 @@ class LLMClient:
             extra_body={"enable_thinking": self.enable_thinking},
         )
         if not response.choices:
-            return fallback_builder(messages) if fallback_builder else None
+            raise RuntimeError("LLM final JSON response contained no choices.")
+
+        # parse final result
         final_content = response.choices[0].message.content or ""
         parsed = _extract_json_object(final_content)
         if parsed is None:
-            parsed = _extract_json_object(_salvage_json_like_text(final_content))
+            parsed = _extract_json_object(final_content)
         if parsed is None and fallback_builder:
             parsed = fallback_builder(messages + [{"role": "assistant", "content": final_content}])
         if progress_callback:
@@ -186,21 +206,3 @@ def _extract_json_object(content: str) -> dict[str, Any] | None:
             except json.JSONDecodeError:
                 return None
     return None
-
-
-def _salvage_json_like_text(content: str) -> str:
-    content = content.strip()
-    if not content:
-        return content
-    content = content.replace("```json", "```").replace("```JSON", "```")
-    start = content.find("{")
-    end = content.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        return content[start : end + 1]
-    return content
-
-
-def _parse_bool(value: str | None, default: bool) -> bool:
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}

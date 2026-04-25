@@ -23,7 +23,6 @@ class BaseSkill(ABC):
         context.emit(f"[skill:start] {self.name}")
         if not self.llm_client.enabled:
             raise AgentError(f"skill:{self.name}", "LLM client is unavailable. Check OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL.")
-        context.emit(f"[skill] {self.name} using llm agent")
         llm_output = self._run_with_llm(skill_input, context)
         if llm_output is None:
             raise AgentError(f"skill:{self.name}", "LLM tool-agent failed to return valid structured output.")
