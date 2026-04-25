@@ -26,8 +26,14 @@ class Executor:
         parsed_query: ParsedQuery,
         plan: ExecutionPlan,
         verbose: bool = False,
+        show_progress: bool = False,
     ) -> tuple[AgentContext, list[SkillOutput]]:
-        context = AgentContext(repo_path=parsed_query.repo_path, verbose=verbose, reporter=self.reporter)
+        context = AgentContext(
+            repo_path=parsed_query.repo_path,
+            verbose=verbose,
+            progress_enabled=show_progress,
+            reporter=self.reporter,
+        )
         context.workflow_state = self._build_initial_state(parsed_query, plan)
         context.emit(f"[executor:start] repo={parsed_query.repo_path}")
         outputs: list[SkillOutput] = []

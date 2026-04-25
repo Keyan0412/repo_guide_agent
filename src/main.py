@@ -9,6 +9,7 @@ from src.agent.response_formatter import ResponseFormatter
 from src.agent.router import Router
 from src.errors import AgentError
 from src.llm.client import LLMClient
+from src.progress_reporter import ProgressReporter
 from src.schemas.user_io import UserQueryInput
 from src.terminal_renderer import TerminalRenderer
 
@@ -24,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-    reporter = _stderr_reporter if args.verbose else None
+    reporter = ProgressReporter(stream=sys.stderr, verbose=args.verbose)
     llm_client = LLMClient()
     renderer = TerminalRenderer()
     executor = Executor(llm_client=llm_client, reporter=reporter)
@@ -35,17 +36,12 @@ def main() -> None:
         user_input = UserQueryInput(repo_path=str(Path(args.repo).resolve()), question=question)
         parsed_query, plan = router.route_user_input(user_input)
 
-        if reporter:
-            reporter(f"[plan] intent={plan.intent} skills={[skill.name for skill in plan.selected_skills]}")
-        context, outputs = executor.execute_plan(parsed_query, plan, verbose=args.verbose)
+        reporter(f"[plan] intent={plan.intent} skills={[skill.name for skill in plan.selected_skills]}")
+        context, outputs = executor.execute_plan(parsed_query, plan, verbose=args.verbose, show_progress=True)
         renderer.render(formatter.format(outputs, context, question=question), stream=sys.stdout)
     except AgentError as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         sys.exit(1)
-
-
-def _stderr_reporter(message: str) -> None:
-    print(message, file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":

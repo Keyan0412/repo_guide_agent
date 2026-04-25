@@ -11,6 +11,7 @@ from src.schemas.tool_io import ToolLog
 class AgentContext:
     repo_path: str
     verbose: bool = False
+    progress_enabled: bool = False
     reporter: Callable[[str], None] | None = None
     read_files: set[str] = field(default_factory=set)
     previous_results: dict[str, SkillOutput] = field(default_factory=dict)
@@ -35,5 +36,5 @@ class AgentContext:
         self.emit(f"[workflow] node={node_id} type={node_type} name={name} status={status}")
 
     def emit(self, message: str) -> None:
-        if self.verbose and self.reporter:
+        if self.reporter and (self.verbose or self.progress_enabled):
             self.reporter(message)
