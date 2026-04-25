@@ -1,8 +1,0 @@
-llm:
-  enabled: true
-  timeout_seconds: 30
-  max_output_tokens: 800
-tools:
-  max_tree_depth: 3
-  max_read_lines: 300
-  default_top_k: 20
