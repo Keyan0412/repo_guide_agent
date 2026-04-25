@@ -101,7 +101,6 @@ class LLMClient:
         progress_callback=None,
         max_iterations: int = 15,
         max_output_tokens: int = 1400,
-        fallback_builder=None,
     ) -> dict[str, Any] | None:
         """Run a tool-calling loop and return the final parsed JSON object."""
         if not self._client:
@@ -205,11 +204,12 @@ class LLMClient:
         final_content = response.choices[0].message.content or ""
         parsed = _extract_json_object(final_content)
         if parsed is None:
-            parsed = _extract_json_object(final_content)
-        if parsed is None and fallback_builder:
-            parsed = fallback_builder(messages + [{"role": "assistant", "content": final_content}])
+            raise ValueError(
+                "LLM tool-agent failed to produce a valid final JSON object. "
+                f"Final assistant output: {final_content}"
+            )
         if progress_callback:
-            progress_callback("[llm] final JSON response received" if parsed is not None else "[llm] failed to return valid JSON")
+            progress_callback("[llm] final JSON response received")
         return parsed
 
 

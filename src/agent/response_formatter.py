@@ -7,8 +7,8 @@ from pathlib import Path
 from src.agent.context import AgentContext
 from src.errors import AgentError
 from src.llm.client import LLMClient
+from src.prompting import build_response_formatter_prompt
 from src.schemas.skill_io import SkillOutput
-from src.utils.prompt_loader import render_prompt
 
 
 class ResponseFormatter:
@@ -56,18 +56,9 @@ class ResponseFormatter:
     def _format_with_llm(self, outputs: list[SkillOutput], context: AgentContext, question: str | None = None) -> str | None:
         if not self.llm_client.enabled:
             raise AgentError("response_formatter", "LLM client is unavailable for final answer rendering.")
-        system_prompt = render_prompt("prompts/system/response_formatter.md")
-        user_prompt = json.dumps(
-            {
-                "question": question,
-                "repo_path": context.repo_path,
-                "skill_outputs": [output.model_dump() for output in outputs],
-                "tool_log_count": len(context.tool_logs),
-                "uncertainties": context.uncertainties,
-                "workflow_state": context.workflow_state,
-                "workflow_history": context.workflow_history,
-            },
-            ensure_ascii=False,
-            indent=2,
+        prompt = build_response_formatter_prompt(outputs, context, question=question)
+        return self.llm_client.complete(
+            system_prompt=prompt.system_prompt,
+            user_prompt=prompt.user_prompt,
+            max_output_tokens=900,
         )
-        return self.llm_client.complete(system_prompt=system_prompt, user_prompt=user_prompt, max_output_tokens=900)

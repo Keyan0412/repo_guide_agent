@@ -23,14 +23,19 @@ def test_response_formatter_saves_json_output(tmp_path: Path):
     context = AgentContext(repo_path=".")
     outputs = [
         SkillOutput(
-            skill_name="summarize_repo",
+            skill_name="investigate_question",
             data={
-                "likely_purpose": "用于快速理解陌生代码仓库",
-                "primary_language": "Python",
-                "project_type": "cli",
-                "top_level_modules": [{"path": "src/"}, {"path": "tests/"}],
-                "frameworks": ["Pydantic"],
-                "run_commands": ["repo-guide-agent summarize --repo /tmp/demo"],
+                "investigation_summary": "定位到仓库用途与主入口。",
+                "evidence": ["README.md", "src/main.py"],
+                "findings": [
+                    {
+                        "claim": "这是一个用于理解代码仓库的命令行 Agent。",
+                        "importance": "high",
+                        "evidence": ["README.md", "src/main.py"],
+                        "related_files": ["README.md", "src/main.py"],
+                    }
+                ],
+                "evidence_gaps": [],
                 "uncertainties": [],
             },
         )
@@ -55,11 +60,12 @@ def test_response_formatter_errors_without_llm(tmp_path: Path):
     context = AgentContext(repo_path=".")
     outputs = [
         SkillOutput(
-            skill_name="find_entrypoints",
+            skill_name="investigate_question",
             data={
-                "entry_candidates": [
-                    {"path": "src/main.py", "entry_type": "cli", "reason": "包含 main 和 argparse"}
-                ],
+                "investigation_summary": "已定位入口候选。",
+                "evidence": ["src/main.py"],
+                "findings": [],
+                "evidence_gaps": [],
                 "uncertainties": [],
             },
         )

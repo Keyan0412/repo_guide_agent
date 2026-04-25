@@ -96,7 +96,7 @@ class DummyInvestigateLLMClient:
         }
 
 
-def test_investigate_bootstraps_tree_and_fallback_files_without_readme(tmp_path):
+def test_investigate_bootstraps_tree_without_preselected_files(tmp_path):
     repo = tmp_path / "repo"
     src_dir = repo / "src"
     src_dir.mkdir(parents=True)
@@ -113,5 +113,5 @@ def test_investigate_bootstraps_tree_and_fallback_files_without_readme(tmp_path)
 
     assert output.skill_name == "investigate_question"
     assert any(log.tool_name == "get_file_tree" for log in context.tool_logs)
-    assert any(log.tool_name == "read_files" for log in context.tool_logs)
-    assert str((repo / "src" / "main.py").resolve()) in context.read_files
+    assert not any(log.tool_name == "read_files" for log in context.tool_logs)
+    assert not context.read_files

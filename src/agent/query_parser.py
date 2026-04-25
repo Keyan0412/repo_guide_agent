@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
 from typing import Callable
 
 from src.errors import AgentError
 from src.llm.client import LLMClient
+from src.prompting import build_query_parser_prompt
 from src.schemas.response_models import ParsedQuery
 from src.schemas.user_io import UserQueryInput
-from src.utils.prompt_loader import render_prompt
 
 
 class QueryParser:
@@ -35,22 +34,11 @@ class QueryParser:
         return parsed
 
     def _parse_with_llm(self, user_input: UserQueryInput) -> ParsedQuery | None:
-        system_prompt = render_prompt(
-            "prompts/system/query_parser.md",
-            {
-                "OUTPUT_SCHEMA": json.dumps(ParsedQuery.model_json_schema(), ensure_ascii=False, indent=2),
-            },
-        )
-        user_prompt = json.dumps(
-            {
-                "question": user_input.question,
-            },
-            ensure_ascii=False,
-        )
+        prompt = build_query_parser_prompt(user_input)
         self._emit("[llm] waiting for semantic parse")
         return self.llm_client.generate_model(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
+            system_prompt=prompt.system_prompt,
+            user_prompt=prompt.user_prompt,
             schema=ParsedQuery,
             max_output_tokens=900,
         )

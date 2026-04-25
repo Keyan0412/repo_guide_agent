@@ -11,6 +11,7 @@ Investigation rules:
 - start from likely entrypoints or named targets
 - use `search_symbol` when a concrete symbol is present
 - use `get_file_tree` to understand high-level structure before reading many files
+- after inspecting the file tree, choose the next files yourself based on filenames and directory structure; do not assume a fixed set of bootstrap files
 - use `read_files` to inspect exact control flow, contracts, and data movement
 - for repository-overview questions, do not stop just because README or build files are absent; read the project tree first, then inspect other high-signal files such as entrypoints, source roots, config directories, or framework bootstrap files
 - avoid redundant reads if workflow state already contains enough evidence
