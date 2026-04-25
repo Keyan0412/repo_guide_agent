@@ -11,6 +11,7 @@ class SummarizeRepoSkill(BaseSkill):
 {
   "repo_name": "string",
   "likely_purpose": "string",
+  "evidence": ["string"],
   "primary_language": "string",
   "frameworks": ["string"],
   "project_type": "web|cli|training|library|unknown",

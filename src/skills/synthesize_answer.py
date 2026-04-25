@@ -21,12 +21,14 @@ class SynthesizeAnswerSkill(BaseSkill):
         )
         if result is None:
             return None
+        evidence = result.get("evidence")
+        if not isinstance(evidence, list):
+            return None
         uncertainties = result.get("uncertainties", []) if isinstance(result.get("uncertainties"), list) else []
-        coverage_points = result.get("coverage_points", []) if isinstance(result.get("coverage_points"), list) else []
         return SkillOutput(
             skill_name=self.name,
             data=result,
-            evidence=[str(item) for item in coverage_points[:8]],
+            evidence=[str(item) for item in evidence],
             uncertainties=uncertainties,
             state_updates=self.build_state_updates(result, skill_input, context),
         )
@@ -44,6 +46,7 @@ class SynthesizeAnswerSkill(BaseSkill):
 {
   "answer_title": "string|null",
   "answer_markdown": "string",
+  "evidence": ["string"],
   "coverage_points": ["string"],
   "remaining_gaps": ["string"],
   "uncertainties": ["string"]

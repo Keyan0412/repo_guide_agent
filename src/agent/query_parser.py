@@ -30,7 +30,7 @@ class QueryParser:
         parsed = parsed.model_copy(update={"repo_path": user_input.repo_path, "question": user_input.question})
         self._emit(
             f"[query_parser:done] objective={parsed.objective} answer_mode={parsed.answer_mode} "
-            f"symbol={parsed.symbol_name} module={parsed.module_path}"
+            f"focus={parsed.investigation_focus[:3]}"
         )
         return parsed
 
@@ -44,23 +44,16 @@ class QueryParser:
         user_prompt = json.dumps(
             {
                 "question": user_input.question,
-                "explicit_args": {
-                    "module_path": None,
-                    "symbol_name": None,
-                    "entry_type": None,
-                    "user_goal": None,
-                },
             },
             ensure_ascii=False,
         )
         self._emit("[llm] waiting for semantic parse")
-        result = self.llm_client.generate_json(system_prompt, user_prompt, max_output_tokens=900)
-        if not result:
-            return None
-        try:
-            return ParsedQuery.model_validate(result)
-        except Exception:
-            return None
+        return self.llm_client.generate_model(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            schema=ParsedQuery,
+            max_output_tokens=900,
+        )
 
     def _emit(self, message: str) -> None:
         if self.reporter:

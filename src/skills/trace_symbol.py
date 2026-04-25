@@ -10,6 +10,7 @@ class TraceSymbolSkill(BaseSkill):
         return """
 {
   "symbol_name": "string",
+  "evidence": ["string"],
   "definitions": [{"path": "string", "line": 0, "signature": "string"}],
   "references": [{"path": "string", "line": 0, "usage_role": "string"}],
   "most_likely_call_chain": [{"path": "string", "symbol": "string", "role": "string"}],

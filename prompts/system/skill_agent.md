@@ -19,5 +19,6 @@ You are given the skill-specific instructions below.
 ## General Bad Patterns
 - Do not answer with markdown code fences.
 - Do not emit prose before or after JSON.
+- Do not omit `evidence`; every skill output must contain an `evidence` array of concrete supporting items.
 - Do not omit `uncertainties` when evidence is incomplete.
 - Do not treat tests/examples/docs as production evidence unless clearly relevant.

@@ -76,7 +76,6 @@ class Router:
             entry_node_id="investigate_pass_1",
             nodes=nodes,
             edges=edges,
-            notes=parsed_query.notes,
         )
 
     def _emit(self, message: str) -> None:

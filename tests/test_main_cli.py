@@ -12,23 +12,15 @@ class DummyLLMClient:
     def __init__(self):
         self.json_payloads = [
             {
-                "intent": "answer_repo_question",
                 "objective": "execution_flow_explanation",
                 "answer_mode": "ordered_steps",
-                "module_path": None,
-                "symbol_name": None,
-                "user_goal": "解释从用户问题到最终回答的处理流程",
-                "entry_type": "cli",
-                "key_entities": ["用户问题", "最终回答"],
                 "required_evidence": ["entrypoint", "planning", "execution", "output_rendering"],
                 "investigation_focus": ["CLI 入口", "问题解析", "执行链路"],
-                "expected_sections": ["整体结论", "步骤"],
-                "confidence": 0.9,
-                "notes": [],
             },
             {
                 "answer_title": "任务流",
                 "answer_markdown": "1. 解析命令行参数。\n2. 建模问题并调查仓库。\n3. 合成并校验答案。",
+                "evidence": ["src/main.py", "src/agent/router.py", "src/agent/executor.py"],
                 "coverage_points": ["说明了从输入到输出的步骤"],
                 "remaining_gaps": [],
                 "uncertainties": [],
@@ -36,6 +28,7 @@ class DummyLLMClient:
             {
                 "verdict": "ready",
                 "coverage_ok": True,
+                "evidence": ["workflow_state 包含完整调查和回答结果"],
                 "missing_points": [],
                 "unsupported_claims": [],
                 "recommended_focus": [],
@@ -43,12 +36,16 @@ class DummyLLMClient:
             },
         ]
 
+    def generate_model(self, system_prompt: str, user_prompt: str, schema, max_output_tokens: int = 1200):
+        return schema.model_validate(self.json_payloads.pop(0))
+
     def generate_json(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 1200):
         return self.json_payloads.pop(0)
 
     def run_tool_agent(self, **kwargs):
         return {
             "investigation_summary": "找到入口、调查和输出链路。",
+            "evidence": ["src/main.py", "src/agent/router.py", "src/agent/executor.py", "src/agent/response_formatter.py"],
             "findings": [{"claim": "主链路由 main、router、executor 和 formatter 组成。", "importance": "high", "evidence": ["src/main.py"], "related_files": ["src/main.py"]}],
             "evidence_gaps": [],
             "uncertainties": [],

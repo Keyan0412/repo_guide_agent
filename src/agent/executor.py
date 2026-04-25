@@ -60,7 +60,7 @@ class Executor:
             "question_model": parsed_query.model_dump(),
             "objective": parsed_query.objective,
             "answer_mode": parsed_query.answer_mode,
-            "notes": list(plan.notes),
+            "required_evidence": list(parsed_query.required_evidence),
             "completed_nodes": [],
             "completed_skills": [],
             "outputs_by_skill": {},
@@ -148,14 +148,8 @@ class Executor:
             question=parsed_query.question,
             objective=parsed_query.objective,
             answer_mode=parsed_query.answer_mode,
-            user_goal=parsed_query.user_goal,
-            module_path=parsed_query.module_path,
-            symbol_name=parsed_query.symbol_name,
-            entry_type=parsed_query.entry_type,
-            key_entities=list(parsed_query.key_entities),
             required_evidence=list(parsed_query.required_evidence),
             investigation_focus=list(parsed_query.investigation_focus),
-            expected_sections=list(parsed_query.expected_sections),
             workflow_state=dict(workflow_state),
         )
         return base.model_copy(update=call_args)

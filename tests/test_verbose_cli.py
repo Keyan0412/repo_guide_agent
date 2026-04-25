@@ -14,23 +14,15 @@ class DummyLLMClient:
     def __init__(self):
         self.json_payloads = [
             {
-                "intent": "answer_repo_question",
                 "objective": "repo_overview",
                 "answer_mode": "direct_answer",
-                "module_path": None,
-                "symbol_name": None,
-                "user_goal": None,
-                "entry_type": None,
-                "key_entities": ["仓库"],
                 "required_evidence": ["repo_structure", "entrypoint"],
                 "investigation_focus": ["顶层结构", "入口"],
-                "expected_sections": ["结论", "证据"],
-                "confidence": 0.9,
-                "notes": [],
             },
             {
                 "answer_title": None,
                 "answer_markdown": "这是一个测试仓库回答。",
+                "evidence": ["README.md", "src/main.py"],
                 "coverage_points": ["概述了仓库用途"],
                 "remaining_gaps": [],
                 "uncertainties": [],
@@ -38,6 +30,7 @@ class DummyLLMClient:
             {
                 "verdict": "ready",
                 "coverage_ok": True,
+                "evidence": ["调查结果已经覆盖仓库用途与入口"],
                 "missing_points": [],
                 "unsupported_claims": [],
                 "recommended_focus": [],
@@ -45,12 +38,16 @@ class DummyLLMClient:
             },
         ]
 
+    def generate_model(self, system_prompt: str, user_prompt: str, schema, max_output_tokens: int = 1200):
+        return schema.model_validate(self.json_payloads.pop(0))
+
     def generate_json(self, system_prompt: str, user_prompt: str, max_output_tokens: int = 1200):
         return self.json_payloads.pop(0)
 
     def run_tool_agent(self, **kwargs):
         return {
             "investigation_summary": "定位到入口和顶层结构。",
+            "evidence": ["src/main.py"],
             "findings": [{"claim": "仓库提供命令行入口。", "importance": "high", "evidence": ["src/main.py"], "related_files": ["src/main.py"]}],
             "evidence_gaps": [],
             "uncertainties": [],
@@ -85,6 +82,7 @@ class DummyInvestigateLLMClient:
     def run_tool_agent(self, **kwargs):
         return {
             "investigation_summary": "收集了仓库线索。",
+            "evidence": ["bootstrap", "src/main.py"],
             "findings": [
                 {
                     "claim": "调查阶段已经读取了项目树和代码文件。",

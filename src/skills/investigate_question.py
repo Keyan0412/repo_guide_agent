@@ -98,6 +98,7 @@ class InvestigateQuestionSkill(BaseSkill):
             fallback_claim = f"Collected repository evidence to answer: {skill_input.question}"
         return {
             "investigation_summary": "The model completed tool-based evidence collection but failed to emit fully valid JSON; using a minimal recovered investigation result.",
+            "evidence": sorted(context.read_files)[:8],
             "findings": findings[:6] if isinstance(findings, list) else [
                 {
                     "claim": fallback_claim,
@@ -114,6 +115,7 @@ class InvestigateQuestionSkill(BaseSkill):
         return """
 {
   "investigation_summary": "string",
+  "evidence": ["string"],
   "findings": [
     {
       "claim": "string",

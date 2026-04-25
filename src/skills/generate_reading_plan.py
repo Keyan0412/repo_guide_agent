@@ -10,6 +10,7 @@ class GenerateReadingPlanSkill(BaseSkill):
         return """
 {
   "user_goal": "string",
+  "evidence": ["string"],
   "reading_steps": [
     {
       "order": 1,

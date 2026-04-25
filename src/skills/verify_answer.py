@@ -21,12 +21,14 @@ class VerifyAnswerSkill(BaseSkill):
         )
         if result is None:
             return None
+        evidence = result.get("evidence")
+        if not isinstance(evidence, list):
+            return None
         uncertainties = result.get("uncertainties", []) if isinstance(result.get("uncertainties"), list) else []
-        evidence = [str(item) for item in result.get("missing_points", [])[:6]] if isinstance(result.get("missing_points"), list) else []
         return SkillOutput(
             skill_name=self.name,
             data=result,
-            evidence=evidence,
+            evidence=[str(item) for item in evidence],
             uncertainties=uncertainties,
             state_updates=self.build_state_updates(result, skill_input, context),
             next_actions=self.build_next_actions(result, skill_input, context),
@@ -54,6 +56,7 @@ class VerifyAnswerSkill(BaseSkill):
 {
   "verdict": "ready|needs_more_evidence",
   "coverage_ok": true,
+  "evidence": ["string"],
   "missing_points": ["string"],
   "unsupported_claims": ["string"],
   "recommended_focus": ["string"],

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
+from typing import Any, TypeVar
 
 from openai import OpenAI
 from openai.types.chat import (
@@ -16,6 +16,10 @@ from openai.types.chat import (
     ChatCompletionMessageFunctionToolCall,
 )
 from dotenv import load_dotenv
+from pydantic import BaseModel
+
+
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 class LLMClient:
@@ -64,6 +68,28 @@ class LLMClient:
         if not content:
             return None
         return _extract_json_object(content)
+
+    def generate_model(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        schema: type[ModelT],
+        max_output_tokens: int = 1200,
+    ) -> ModelT | None:
+        """Return a validated Pydantic model from a single completion response."""
+        payload = self.generate_json(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            max_output_tokens=max_output_tokens,
+        )
+        if payload is None:
+            return None
+        try:
+            return schema.model_validate(payload)
+        except Exception as exc:
+            raise ValueError(
+                f"LLM output failed validation for schema {schema.__name__}: {payload}"
+            ) from exc
 
     def run_tool_agent(
         self,

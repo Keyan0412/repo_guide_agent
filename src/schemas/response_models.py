@@ -43,18 +43,14 @@ class ExecutionPlan(BaseModel):
 
 
 class ParsedQuery(BaseModel):
+    # basic
     repo_path: str = ""
     question: str | None = None
-    intent: str = "answer_repo_question"
+
+    # question classification
     objective: str = "answer_repo_question"
     answer_mode: str = "direct_answer"
-    module_path: str | None = None
-    symbol_name: str | None = None
-    user_goal: str | None = None
-    entry_type: str | None = None
-    key_entities: list[str] = Field(default_factory=list)
+
+    # requirements/hints
     required_evidence: list[str] = Field(default_factory=list)
     investigation_focus: list[str] = Field(default_factory=list)
-    expected_sections: list[str] = Field(default_factory=list)
-    confidence: float = 0.0
-    notes: list[str] = Field(default_factory=list)

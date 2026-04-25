@@ -11,6 +11,7 @@ class DummyLLMClient:
     def run_tool_agent(self, **kwargs):
         return {
             "symbol_name": "main",
+            "evidence": ["src/main.py:1 def main()"],
             "definitions": [{"path": "src/main.py", "line": 1, "signature": "def main()"}],
             "references": [],
             "most_likely_call_chain": [],
@@ -21,5 +22,5 @@ class DummyLLMClient:
 
 def test_trace_symbol_smoke():
     skill = TraceSymbolSkill(llm_client=DummyLLMClient())
-    output = skill.run(SkillInput(repo_path=".", symbol_name="main"), AgentContext(repo_path="."))
+    output = skill.run(SkillInput(repo_path=".", question="main() 在哪里定义？"), AgentContext(repo_path="."))
     assert output.data["symbol_name"] == "main"

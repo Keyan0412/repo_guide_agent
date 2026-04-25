@@ -9,6 +9,7 @@ class FindEntrypointsSkill(BaseSkill):
     def output_schema_text(self) -> str:
         return """
 {
+  "evidence": ["string"],
   "entry_candidates": [
     {
       "path": "string",

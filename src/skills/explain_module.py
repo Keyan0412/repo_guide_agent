@@ -11,6 +11,7 @@ class ExplainModuleSkill(BaseSkill):
 {
   "module_path": "string",
   "module_role": "string",
+  "evidence": ["string"],
   "key_files": [{"path": "string", "role": "string"}],
   "key_symbols": [{"name": "string", "type": "class|function|variable", "role": "string"}],
   "upstream_dependencies": ["string"],

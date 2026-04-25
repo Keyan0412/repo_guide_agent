@@ -10,14 +10,8 @@ class SkillInput(BaseModel):
     question: str | None = None
     objective: str | None = None
     answer_mode: str | None = None
-    user_goal: str | None = None
-    module_path: str | None = None
-    symbol_name: str | None = None
-    entry_type: str | None = None
-    key_entities: list[str] = Field(default_factory=list)
     required_evidence: list[str] = Field(default_factory=list)
     investigation_focus: list[str] = Field(default_factory=list)
-    expected_sections: list[str] = Field(default_factory=list)
     workflow_state: dict[str, Any] = Field(default_factory=dict)
 
 

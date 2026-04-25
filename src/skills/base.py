@@ -42,12 +42,14 @@ class BaseSkill(ABC):
         )
         if result is None:
             return None
-        evidence = _collect_evidence(result)
+        evidence = result.get("evidence")
+        if not isinstance(evidence, list):
+            raise AgentError(f"skill:{self.name}", "LLM output must include an `evidence` array.")
         uncertainties = result.get("uncertainties", []) if isinstance(result.get("uncertainties"), list) else []
         return SkillOutput(
             skill_name=self.name,
             data=result,
-            evidence=evidence,
+            evidence=[str(item) for item in evidence],
             uncertainties=uncertainties,
             state_updates=self.build_state_updates(result, skill_input, context),
             next_actions=self.build_next_actions(result, skill_input, context),
@@ -81,14 +83,8 @@ class BaseSkill(ABC):
                 "question": skill_input.question,
                 "objective": skill_input.objective,
                 "answer_mode": skill_input.answer_mode,
-                "user_goal": skill_input.user_goal,
-                "module_path": skill_input.module_path,
-                "symbol_name": skill_input.symbol_name,
-                "entry_type": skill_input.entry_type,
-                "key_entities": skill_input.key_entities,
                 "required_evidence": skill_input.required_evidence,
                 "investigation_focus": skill_input.investigation_focus,
-                "expected_sections": skill_input.expected_sections,
                 "workflow_state": skill_input.workflow_state,
                 "previous_results": previous,
             },
@@ -108,28 +104,3 @@ class BaseSkill(ABC):
     @abstractmethod
     def output_schema_text(self) -> str:
         raise NotImplementedError
-
-
-def _collect_evidence(result: dict[str, Any]) -> list[str]:
-    if isinstance(result.get("key_evidence"), list):
-        return [str(item) for item in result["key_evidence"][:8]]
-    if isinstance(result.get("supporting_evidence"), list):
-        return [str(item) for item in result["supporting_evidence"][:8]]
-    if isinstance(result.get("entry_candidates"), list):
-        evidence: list[str] = []
-        for item in result["entry_candidates"][:3]:
-            for value in item.get("supporting_evidence", [])[:2]:
-                evidence.append(str(value))
-        return evidence
-    if isinstance(result.get("findings"), list):
-        evidence = []
-        for item in result["findings"][:6]:
-            claim = item.get("claim")
-            if claim:
-                evidence.append(str(claim))
-            for value in item.get("evidence", [])[:2]:
-                evidence.append(str(value))
-        return evidence
-    if isinstance(result.get("evidence_snippets"), list):
-        return [str(item) for item in result["evidence_snippets"][:8]]
-    return []
