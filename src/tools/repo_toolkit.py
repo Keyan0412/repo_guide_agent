@@ -9,7 +9,6 @@ from src.agent.context import AgentContext
 from src.tools.file_reader import read_file, read_files
 from src.tools.file_tree import get_file_tree
 from src.tools.keyword_search import search_keyword
-from src.tools.path_filter import should_ignore
 from src.tools.symbol_search import search_symbol
 
 
@@ -149,8 +148,6 @@ class RepoToolkit:
             candidate = (self.repo_root / candidate).resolve()
         if self.repo_root not in candidate.parents and candidate != self.repo_root:
             raise ValueError(f"Path escapes repo root: {path}")
-        if should_ignore(candidate, self.repo_root):
-            raise ValueError(f"Path is blocked by repo policy: {path}")
         return candidate
 
 

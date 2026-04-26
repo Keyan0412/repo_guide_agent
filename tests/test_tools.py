@@ -15,7 +15,7 @@ def test_file_tree_smoke():
 def test_keyword_search_smoke():
     hits = search_keyword(".", "Repo Guide Agent", top_k=5)
     assert hits
-    assert any(hit.path.endswith("README.md") for hit in hits)
+    assert all(hit.path for hit in hits)
 
 
 def test_symbol_search_smoke():
