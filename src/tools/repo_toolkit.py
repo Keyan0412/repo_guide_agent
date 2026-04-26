@@ -68,14 +68,15 @@ def build_tool_schemas() -> list[ChatCompletionToolParam]:
             "type": "function",
             "function": {
                 "name": "search_symbol",
-                "description": "Search possible definitions and references for a symbol.",
+                "description": "Search possible definitions and references for a symbol in a specific language.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "symbol_name": {"type": "string"},
+                        "language": {"type": "string"},
                         "top_k": {"type": "integer", "minimum": 1, "maximum": 50},
                     },
-                    "required": ["symbol_name"],
+                    "required": ["symbol_name", "language"],
                 },
             },
         },
@@ -128,13 +129,13 @@ class RepoToolkit:
                 query = str(arguments.get("query", ""))
                 top_k = int(arguments.get("top_k", 10))
                 self.context.log_tool(tool_name, {"query": query, "top_k": top_k})
-                return {"hits": [_serialize(hit) for hit in search_keyword(str(self.repo_root), query, top_k=top_k)]}
+                return _serialize(search_keyword(str(self.repo_root), query, top_k=top_k))
             if tool_name == "search_symbol":
                 symbol_name = str(arguments.get("symbol_name", ""))
+                language = str(arguments.get("language", ""))
                 top_k = int(arguments.get("top_k", 10))
-                self.context.log_tool(tool_name, {"symbol_name": symbol_name, "top_k": top_k})
-                result = search_symbol(str(self.repo_root), symbol_name, top_k=top_k)
-                return {key: [_serialize(item) for item in value] for key, value in result.items()}
+                self.context.log_tool(tool_name, {"symbol_name": symbol_name, "language": language, "top_k": top_k})
+                return _serialize(search_symbol(str(self.repo_root), symbol_name, language, top_k=top_k))
             return {"error": f"Unknown tool: {tool_name}"}
         except Exception as exc:
             self.context.emit(f"[tool:error] {tool_name} {exc}")

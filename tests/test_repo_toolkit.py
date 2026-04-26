@@ -8,12 +8,24 @@ def test_tool_schemas_smoke():
     tools = build_tool_schemas()
     names = [tool["function"]["name"] for tool in tools]
     assert names == ["get_file_tree", "read_files", "search_keyword", "search_symbol"]
+    symbol_tool = next(tool for tool in tools if tool["function"]["name"] == "search_symbol")
+    assert symbol_tool["function"]["parameters"]["required"] == ["symbol_name", "language"]
 
 
 def test_repo_toolkit_executes_keyword_search():
     toolkit = RepoToolkit(".", AgentContext(repo_path="."))
     result = toolkit.execute("search_keyword", {"query": "项目说明书", "top_k": 3})
     assert result["hits"]
+    assert "errors" in result
+
+
+def test_repo_toolkit_executes_symbol_search():
+    toolkit = RepoToolkit(".", AgentContext(repo_path="."))
+    result = toolkit.execute("search_symbol", {"symbol_name": "main", "language": "python", "top_k": 3})
+    assert result["language"] == "python"
+    assert result["supported"] is True
+    assert "definitions" in result
+    assert "references" in result
 
 
 def test_repo_toolkit_executes_read_files():
