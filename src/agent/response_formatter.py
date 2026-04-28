@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
@@ -33,9 +34,9 @@ class ResponseFormatter:
             "repo_path": context.repo_path,
             "outputs": [output.model_dump() for output in outputs],
             "tool_logs": [tool_log.model_dump() for tool_log in context.tool_logs],
-            "uncertainties": context.uncertainties,
+            "uncertainties": context.workflow_state.open_questions,
             "read_files": sorted(context.read_files),
-            "workflow_state": context.workflow_state,
+            "workflow_state": asdict(context.workflow_state),
             "workflow_history": context.workflow_history,
         }
         file_path = self.output_dir / f"run_{timestamp}.json"
@@ -49,7 +50,7 @@ class ResponseFormatter:
             if output.skill_name == "synthesize_answer" and isinstance(answer, str) and answer.strip():
                 synthesized = answer.strip()
                 break
-        if synthesized and context.workflow_state.get("answer_ready"):
+        if synthesized and context.workflow_state.answer_ready:
             return synthesized
         return self._format_with_llm(outputs, context, question=question)
 

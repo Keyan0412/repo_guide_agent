@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -44,7 +43,6 @@ def search_symbol(root_path: str, symbol_name: str, language: str, top_k: int = 
 
 def search_symbol_python(root_path: str, symbol_name: str, top_k: int = 20) -> SymbolSearchResult:
     root = Path(root_path).resolve()
-    reference_regex = re.compile(rf"\b{re.escape(symbol_name)}\b")
     definitions: list[SymbolHit] = []
     references: list[SymbolHit] = []
     errors: list[RepoWalkError] = []
@@ -76,19 +74,19 @@ def search_symbol_python(root_path: str, symbol_name: str, top_k: int = 20) -> S
         definition_lines = {hit.line for hit in file_definitions}
         reference_match_types = _find_python_reference_match_types(symbol_name, text)
 
-        for idx, line in enumerate(lines, 1):
+        for idx, match_type in sorted(reference_match_types.items()):
             if idx in definition_lines:
                 continue
-            if reference_regex.search(line):
-                references.append(
-                    SymbolHit(
-                        str(path.relative_to(root)),
-                        idx,
-                        "reference",
-                        reference_match_types.get(idx, "path_or_text_mention"),
-                        line.strip(),
-                    )
+            snippet = lines[idx - 1].strip() if 0 < idx <= len(lines) else ""
+            references.append(
+                SymbolHit(
+                    str(path.relative_to(root)),
+                    idx,
+                    "reference",
+                    match_type,
+                    snippet,
                 )
+            )
             if len(definitions) >= top_k and len(references) >= top_k:
                 break
 
@@ -132,9 +130,8 @@ def _find_python_reference_match_types(symbol_name: str, text: str) -> dict[int,
         return {}
 
     priorities = {
-        "path_or_text_mention": 0,
-        "module_or_alias": 1,
-        "direct_identifier": 2,
+        "module_or_alias": 0,
+        "direct_identifier": 1,
     }
     matches: dict[int, str] = {}
 

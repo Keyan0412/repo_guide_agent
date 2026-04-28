@@ -40,3 +40,10 @@ def test_terminal_renderer_falls_back_to_plain_text_for_non_tty():
     assert "# 标题" not in output
     assert "`src/main.py`" not in output
     assert output.endswith("\n")
+
+
+def test_terminal_renderer_normalizes_adjacent_bold_markers():
+    output = TerminalRenderer.render_plain_text("核心作用是**“规划”**而非“分发”。")
+
+    assert "规划" in output
+    assert "**" not in output

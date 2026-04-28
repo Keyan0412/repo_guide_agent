@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
 
 from src.agent.context import AgentContext
+from src.prompting.loader import render_prompt
 from src.schemas.response_models import ParsedQuery
 from src.schemas.skill_io import SkillInput, SkillOutput
 from src.schemas.user_io import UserQueryInput
-from src.utils.prompt_loader import render_prompt
 
 
 @dataclass(frozen=True)
@@ -36,8 +35,7 @@ def build_skill_agent_prompt(
     skill_input: SkillInput,
     context: AgentContext,
 ) -> PromptSpec:
-    prompt_path = Path("prompts/skills") / f"{skill_name}.md"
-    skill_prompt = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+    skill_prompt = render_prompt(f"prompts/skills/{skill_name}.md", missing_ok=True)
     return PromptSpec(
         system_prompt=render_prompt(
             "prompts/system/skill_agent.md",
@@ -77,8 +75,8 @@ def build_response_formatter_prompt(
                 "repo_path": context.repo_path,
                 "skill_outputs": [output.model_dump() for output in outputs],
                 "tool_log_count": len(context.tool_logs),
-                "uncertainties": context.uncertainties,
-                "workflow_state": context.workflow_state,
+                "uncertainties": context.workflow_state.open_questions,
+                "workflow_state": context.workflow_state.to_dict(),
                 "workflow_history": context.workflow_history,
             }
         ),
@@ -86,7 +84,6 @@ def build_response_formatter_prompt(
 
 
 def _build_skill_user_prompt(skill_input: SkillInput, context: AgentContext) -> str:
-    previous = {name: output.data for name, output in context.previous_results.items()}
     return _dump_payload(
         {
             "repo_path": skill_input.repo_path,
@@ -96,7 +93,7 @@ def _build_skill_user_prompt(skill_input: SkillInput, context: AgentContext) -> 
             "required_evidence": skill_input.required_evidence,
             "investigation_focus": skill_input.investigation_focus,
             "workflow_state": skill_input.workflow_state,
-            "previous_results": previous,
+            "previous_results": context.workflow_state.outputs_by_skill,
         }
     )
 

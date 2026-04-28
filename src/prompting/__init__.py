@@ -5,6 +5,7 @@ from src.prompting.builders import (
     build_skill_agent_prompt,
     build_structured_skill_prompt,
 )
+from src.prompting.loader import render_prompt
 
 __all__ = [
     "PromptSpec",
@@ -12,4 +13,5 @@ __all__ = [
     "build_response_formatter_prompt",
     "build_skill_agent_prompt",
     "build_structured_skill_prompt",
+    "render_prompt",
 ]

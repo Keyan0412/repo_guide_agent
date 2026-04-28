@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.agent.context import AgentContext
+from src.agent.logger import AgentLogger
 from src.tools.repo_toolkit import RepoToolkit, build_tool_schemas
 
 
@@ -13,14 +14,16 @@ def test_tool_schemas_smoke():
 
 
 def test_repo_toolkit_executes_keyword_search():
-    toolkit = RepoToolkit(".", AgentContext(repo_path="."))
+    context = AgentContext(repo_path=".")
+    toolkit = RepoToolkit(".", AgentLogger(tool_logs=context.tool_logs, workflow_history=context.workflow_history), context.read_files)
     result = toolkit.execute("search_keyword", {"query": "项目说明书", "top_k": 3})
     assert result["hits"]
     assert "errors" in result
 
 
 def test_repo_toolkit_executes_symbol_search():
-    toolkit = RepoToolkit(".", AgentContext(repo_path="."))
+    context = AgentContext(repo_path=".")
+    toolkit = RepoToolkit(".", AgentLogger(tool_logs=context.tool_logs, workflow_history=context.workflow_history), context.read_files)
     result = toolkit.execute("search_symbol", {"symbol_name": "main", "language": "python", "top_k": 3})
     assert result["language"] == "python"
     assert result["supported"] is True
@@ -29,7 +32,8 @@ def test_repo_toolkit_executes_symbol_search():
 
 
 def test_repo_toolkit_executes_read_files():
-    toolkit = RepoToolkit(".", AgentContext(repo_path="."))
+    context = AgentContext(repo_path=".")
+    toolkit = RepoToolkit(".", AgentLogger(tool_logs=context.tool_logs, workflow_history=context.workflow_history), context.read_files)
     result = toolkit.execute(
         "read_files",
         {
@@ -44,7 +48,8 @@ def test_repo_toolkit_executes_read_files():
 
 
 def test_repo_toolkit_executes_read_files_with_single_path():
-    toolkit = RepoToolkit(".", AgentContext(repo_path="."))
+    context = AgentContext(repo_path=".")
+    toolkit = RepoToolkit(".", AgentLogger(tool_logs=context.tool_logs, workflow_history=context.workflow_history), context.read_files)
     result = toolkit.execute(
         "read_files",
         {
@@ -58,7 +63,8 @@ def test_repo_toolkit_executes_read_files_with_single_path():
 
 
 def test_repo_toolkit_executes_read_files_with_partial_failure():
-    toolkit = RepoToolkit(".", AgentContext(repo_path="."))
+    context = AgentContext(repo_path=".")
+    toolkit = RepoToolkit(".", AgentLogger(tool_logs=context.tool_logs, workflow_history=context.workflow_history), context.read_files)
     result = toolkit.execute(
         "read_files",
         {

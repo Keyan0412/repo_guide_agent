@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.agent.context import AgentContext
+from src.agent.logger import AgentLogger
 from src.schemas.skill_io import SkillInput
 from src.skills.base import BaseSkill
 from src.tools.repo_toolkit import RepoToolkit
@@ -11,9 +12,9 @@ from src.tools.repo_toolkit import RepoToolkit
 class InvestigateQuestionSkill(BaseSkill):
     name = "investigate_question"
 
-    def _run_with_llm(self, skill_input: SkillInput, context: AgentContext):
-        self._bootstrap_repo_evidence(skill_input, context)
-        return super()._run_with_llm(skill_input, context)
+    def _run_with_llm(self, skill_input: SkillInput, context: AgentContext, logger: AgentLogger):
+        self._bootstrap_repo_evidence(skill_input, context, logger)
+        return super()._run_with_llm(skill_input, context, logger)
 
     @staticmethod
     def build_state_updates(result: dict[str, Any], skill_input: SkillInput, context: AgentContext) -> dict[str, Any]:
@@ -51,8 +52,8 @@ class InvestigateQuestionSkill(BaseSkill):
 """.strip()
 
     @staticmethod
-    def _bootstrap_repo_evidence(skill_input: SkillInput, context: AgentContext) -> None:
-        toolkit = RepoToolkit(skill_input.repo_path, context)
+    def _bootstrap_repo_evidence(skill_input: SkillInput, context: AgentContext, logger: AgentLogger) -> None:
+        toolkit = RepoToolkit(skill_input.repo_path, logger, context.read_files)
 
-        if not any(log.tool_name == "get_file_tree" for log in context.tool_logs):
+        if not any(log.tool_name == "get_file_tree" for log in logger.tool_logs):
             toolkit.execute("get_file_tree", {"path": ".", "max_depth": 3})

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.agent.context import AgentContext
+from src.agent.logger import AgentLogger
 from src.schemas.skill_io import SkillInput, SkillOutput
 from src.skills.base import BaseSkill
 
@@ -8,10 +9,11 @@ from src.skills.base import BaseSkill
 class VerifyAnswerSkill(BaseSkill):
     name = "verify_answer"
 
-    def _run_with_llm(self, skill_input: SkillInput, context: AgentContext) -> SkillOutput | None:
+    def _run_with_llm(self, skill_input: SkillInput, context: AgentContext, logger: AgentLogger) -> SkillOutput | None:
         return self._run_structured_llm(
             skill_input=skill_input,
             context=context,
+            logger=logger,
             system_prompt_path="prompts/system/verify_answer.md",
             max_output_tokens=900,
         )

@@ -104,7 +104,7 @@ def test_investigate_bootstraps_tree_without_preselected_files(tmp_path):
     (src_dir / "service.py").write_text("SERVICE_NAME = 'mentor-finder'\n", encoding="utf-8")
     (repo / "docs").mkdir()
 
-    context = AgentContext(repo_path=str(repo), verbose=False)
+    context = AgentContext(repo_path=str(repo))
     skill = InvestigateQuestionSkill(llm_client=DummyInvestigateLLMClient())
     output = skill.run(
         SkillInput(repo_path=str(repo), question="这个仓库是干什么的？", objective="repo_overview"),

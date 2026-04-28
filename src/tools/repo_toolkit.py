@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 from openai.types.chat import ChatCompletionToolParam
 
-from src.agent.context import AgentContext
-from src.tools.file_reader import read_file, read_files
+from src.agent.logger import AgentLogger
+from src.tools.file_reader import read_files
 from src.tools.file_tree import get_file_tree
 from src.tools.keyword_search import search_keyword
 from src.tools.symbol_search import search_symbol
@@ -84,26 +84,18 @@ def build_tool_schemas() -> list[ChatCompletionToolParam]:
 
 
 class RepoToolkit:
-    def __init__(self, repo_path: str, context: AgentContext) -> None:
+    def __init__(self, repo_path: str, logger: AgentLogger, read_files_registry: set[str]) -> None:
         self.repo_root = Path(repo_path).resolve()
-        self.context = context
+        self.logger = logger
+        self.read_files_registry = read_files_registry
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         try:
             if tool_name == "get_file_tree":
                 target = self._resolve(arguments.get("path", "."))
                 max_depth = int(arguments.get("max_depth", 3))
-                self.context.log_tool(tool_name, {"path": str(target), "max_depth": max_depth})
+                self.logger.log_tool(tool_name, {"path": str(target), "max_depth": max_depth})
                 result = get_file_tree(str(target), max_depth=max_depth)
-                return _serialize(result)
-            if tool_name == "read_file":
-                target = self._resolve(arguments.get("path"))
-                start_line = int(arguments.get("start_line", 1))
-                end_line = arguments.get("end_line")
-                end_line = int(end_line) if end_line else None
-                self.context.log_tool(tool_name, {"path": str(target), "start_line": start_line, "end_line": end_line})
-                self.context.read_files.add(str(target))
-                result = read_file(str(target), start_line=start_line, end_line=end_line)
                 return _serialize(result)
             if tool_name == "read_files":
                 raw_paths = arguments.get("paths") or []
@@ -113,7 +105,7 @@ class RepoToolkit:
                 start_line = int(arguments.get("start_line", 1))
                 end_line = arguments.get("end_line")
                 end_line = int(end_line) if end_line else None
-                self.context.log_tool(
+                self.logger.log_tool(
                     tool_name,
                     {
                         "paths": [str(target) for target in targets],
@@ -122,23 +114,23 @@ class RepoToolkit:
                     },
                 )
                 for target in targets:
-                    self.context.read_files.add(str(target))
+                    self.read_files_registry.add(str(target))
                 result = read_files([str(target) for target in targets], start_line=start_line, end_line=end_line)
                 return _serialize(result)
             if tool_name == "search_keyword":
                 query = str(arguments.get("query", ""))
                 top_k = int(arguments.get("top_k", 10))
-                self.context.log_tool(tool_name, {"query": query, "top_k": top_k})
+                self.logger.log_tool(tool_name, {"query": query, "top_k": top_k})
                 return _serialize(search_keyword(str(self.repo_root), query, top_k=top_k))
             if tool_name == "search_symbol":
                 symbol_name = str(arguments.get("symbol_name", ""))
                 language = str(arguments.get("language", ""))
                 top_k = int(arguments.get("top_k", 10))
-                self.context.log_tool(tool_name, {"symbol_name": symbol_name, "language": language, "top_k": top_k})
+                self.logger.log_tool(tool_name, {"symbol_name": symbol_name, "language": language, "top_k": top_k})
                 return _serialize(search_symbol(str(self.repo_root), symbol_name, language, top_k=top_k))
             return {"error": f"Unknown tool: {tool_name}"}
         except Exception as exc:
-            self.context.emit(f"[tool:error] {tool_name} {exc}")
+            self.logger.emit(f"[tool:error] {tool_name} {exc}")
             return {"error": f"{type(exc).__name__}: {exc}"}
 
     def _resolve(self, path: str | None) -> Path:

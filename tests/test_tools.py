@@ -120,7 +120,6 @@ def test_symbol_search_classifies_reference_match_types(tmp_path):
         (1, "module_or_alias"),
         (2, "module_or_alias"),
         (3, "direct_identifier"),
-        (4, "path_or_text_mention"),
     ]
 
 

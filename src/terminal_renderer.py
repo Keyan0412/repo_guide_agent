@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from typing import TextIO
 
 from rich.console import Console
@@ -10,7 +11,12 @@ from rich.markdown import Markdown
 class TerminalRenderer:
     def render(self, text: str, stream: TextIO) -> None:
         if self._should_render_markdown(stream):
-            Console(file=stream, force_terminal=True, color_system="auto", soft_wrap=True).print(Markdown(text))
+            Console(
+                file=stream,
+                force_terminal=True,
+                color_system="auto",
+                soft_wrap=True,
+            ).print(Markdown(self._normalize_markdown(text)))
             return
         stream.write(self.render_plain_text(text))
         if not text.endswith("\n"):
@@ -19,8 +25,16 @@ class TerminalRenderer:
     @staticmethod
     def render_plain_text(text: str) -> str:
         buffer = io.StringIO()
-        Console(file=buffer, force_terminal=False, color_system=None, soft_wrap=True).print(Markdown(text))
+        Console(file=buffer, force_terminal=False, color_system=None, soft_wrap=True).print(
+            Markdown(TerminalRenderer._normalize_markdown(text))
+        )
         return buffer.getvalue().rstrip("\n")
+
+    @staticmethod
+    def _normalize_markdown(text: str) -> str:
+        normalized = re.sub(r"(?<=\S)(\*\*.+?\*\*)", r" \1", text)
+        normalized = re.sub(r"(\*\*.+?\*\*)(?=\S)", r"\1 ", normalized)
+        return normalized
 
     @staticmethod
     def _should_render_markdown(stream: TextIO) -> bool:

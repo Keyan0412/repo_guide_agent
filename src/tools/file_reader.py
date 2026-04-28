@@ -27,7 +27,7 @@ class ReadFileError:
     error: str
 
 
-def read_file(file_path: str, start_line: int = 1, end_line: int | None = None) -> ReadFileResult:
+def _read_file(file_path: str, start_line: int = 1, end_line: int | None = None) -> ReadFileResult:
     path = Path(file_path).resolve()
     lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
     total_lines = len(lines)
@@ -49,7 +49,7 @@ def read_files(paths: list[str], start_line: int = 1, end_line: int | None = Non
     errors: list[ReadFileError] = []
     for path in paths:
         try:
-            files.append(read_file(path, start_line=start_line, end_line=end_line))
+            files.append(_read_file(path, start_line=start_line, end_line=end_line))
         except Exception as exc:
             errors.append(ReadFileError(path=str(Path(path).resolve()), error=f"{type(exc).__name__}: {exc}"))
     return ReadFilesResult(files=files, errors=errors)

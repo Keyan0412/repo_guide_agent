@@ -5,11 +5,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class SkillCall(BaseModel):
-    name: str
-    args: dict = Field(default_factory=dict)
-
-
 class WorkflowNode(BaseModel):
     node_id: str
     node_type: Literal["skill", "checkpoint"] = "skill"
@@ -32,8 +27,8 @@ class ExecutionPlan(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
     @property
-    def selected_skills(self) -> list[SkillCall]:
-        return [SkillCall(name=node.name, args=node.args) for node in self.nodes if node.node_type == "skill"]
+    def selected_skills(self) -> list[WorkflowNode]:
+        return [node for node in self.nodes if node.node_type == "skill"]
 
     def get_node(self, node_id: str) -> WorkflowNode:
         for node in self.nodes:
